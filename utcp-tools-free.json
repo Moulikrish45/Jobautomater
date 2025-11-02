@@ -1,0 +1,29 @@
+{
+  "tools": [
+    {
+      "name": "search_remotive",
+      "endpoint": "https://remotive.com/api/remote-jobs",
+      "method": "GET",
+      "auth": "none"
+    },
+    {
+      "name": "search_arbeitnow",
+      "endpoint": "https://www.arbeitnow.com/api/job-board-api",
+      "method": "GET",
+      "auth": "none"
+    },
+    {
+      "name": "search_github_jobs",
+      "endpoint": "https://jobs.github.com/positions.json",
+      "method": "GET",
+      "auth": "none"
+    },
+
+    {
+      "name": "huggingface_inference",
+      "endpoint": "https://api-inference.huggingface.co/models/{model}",
+      "method": "POST",
+      "auth": "none"
+    }
+  ]
+}

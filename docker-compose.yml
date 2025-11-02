@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  # MongoDB database
+  mongodb:
+    image: mongo:7.0
+    container_name: job_automation_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: job_automation
+    volumes:
+      - mongodb_data:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - job_automation_network
+
+  # Redis for Celery broker
+  redis:
+    image: redis:7.2-alpine
+    container_name: job_automation_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - job_automation_network
+
+  # FastAPI application (for production)
+  api:
+    build: .
+    container_name: job_automation_api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URL=mongodb://admin:password@mongodb:27017/job_automation?authSource=admin
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - ./app:/app/app
+      - ./data:/app/data  # For file storage
+    networks:
+      - job_automation_network
+    profiles:
+      - production
+
+  # Celery worker
+  celery_worker:
+    build: .
+    container_name: job_automation_celery_worker
+    restart: unless-stopped
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=4
+    environment:
+      - MONGODB_URL=mongodb://admin:password@mongodb:27017/job_automation?authSource=admin
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - ./app:/app/app
+      - ./data:/app/data
+    networks:
+      - job_automation_network
+    profiles:
+      - production
+
+  # Celery beat scheduler
+  celery_beat:
+    build: .
+    container_name: job_automation_celery_beat
+    restart: unless-stopped
+    command: celery -A app.celery_app beat --loglevel=info
+    environment:
+      - MONGODB_URL=mongodb://admin:password@mongodb:27017/job_automation?authSource=admin
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - ./app:/app/app
+    networks:
+      - job_automation_network
+    profiles:
+      - production
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  job_automation_network:
+    driver: bridge

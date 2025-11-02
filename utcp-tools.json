@@ -1,0 +1,81 @@
+{
+  "tools": [
+    {
+      "name": "search_jobs_adzuna",
+      "description": "Search jobs using Adzuna API (1000 free calls/month)",
+      "protocol": "utcp",
+      "endpoint": "https://api.adzuna.com/v1/api/jobs/{country}/search/1",
+      "method": "GET",
+      "auth": {
+        "type": "query_params",
+        "params": ["app_id", "app_key"]
+      },
+      "parameters": {
+        "country": "us",
+        "what": "string - job keywords",
+        "where": "string - location",
+        "results_per_page": "number - max 50",
+        "max_days_old": "number - filter by posting date"
+      }
+    },
+    {
+      "name": "search_jobs_jsearch",
+      "description": "Search jobs using JSearch API (RapidAPI)",
+      "protocol": "utcp",
+      "endpoint": "https://jsearch.p.rapidapi.com/search",
+      "method": "GET",
+      "auth": {
+        "type": "header",
+        "header": "X-RapidAPI-Key"
+      },
+      "parameters": {
+        "query": "string - job search query",
+        "page": "number - page number",
+        "num_pages": "number - number of pages",
+        "date_posted": "string - all/today/3days/week/month"
+      }
+    },
+    {
+      "name": "search_jobs_remotive",
+      "description": "Search remote jobs using Remotive API (Free)",
+      "protocol": "utcp",
+      "endpoint": "https://remotive.com/api/remote-jobs",
+      "method": "GET",
+      "auth": {
+        "type": "none"
+      },
+      "parameters": {
+        "search": "string - job keywords",
+        "category": "string - job category",
+        "limit": "number - results limit"
+      }
+    },
+    {
+      "name": "parse_resume_affinda",
+      "description": "Parse resume using Affinda API (100 free/month)",
+      "protocol": "utcp",
+      "endpoint": "https://api.affinda.com/v3/resumes",
+      "method": "POST",
+      "auth": {
+        "type": "bearer"
+      },
+      "parameters": {
+        "file": "binary - resume file",
+        "wait": "boolean - wait for processing"
+      }
+    },
+    {
+      "name": "optimize_resume_huggingface",
+      "description": "Optimize resume using HuggingFace free API",
+      "protocol": "utcp",
+      "endpoint": "https://api-inference.huggingface.co/models/yanekyuk/bert-uncased-keyword-extractor",
+      "method": "POST",
+      "auth": {
+        "type": "none"
+      },
+      "parameters": {
+        "inputs": "string - text to extract keywords from"
+      }
+    }
+  ]
+}
