@@ -150,7 +150,7 @@ class UserService:
             user = await self.user_repository.update_experience(
                 ObjectId(user_id), 
                 experience_index,
-                experience.dict()
+                experience.model_dump()
             )
             
             logger.info(f"Experience updated for user: {user_id}")
@@ -183,7 +183,7 @@ class UserService:
             
             user = await self.user_repository.add_education(
                 ObjectId(user_id), 
-                education.dict()
+                education.model_dump()
             )
             
             logger.info(f"Education added for user: {user_id}")
@@ -203,7 +203,7 @@ class UserService:
             user = await self.user_repository.update_education(
                 ObjectId(user_id), 
                 education_index,
-                education.dict()
+                education.model_dump()
             )
             
             logger.info(f"Education updated for user: {user_id}")
@@ -249,7 +249,7 @@ class UserService:
             # Update user with parsed resume content
             user = await self.user_repository.update_resume_content(
                 ObjectId(user_id), 
-                parsed_content
+                parsed_content.model_dump()
             )
             
             logger.info(f"Resume uploaded and parsed for user: {user_id}")

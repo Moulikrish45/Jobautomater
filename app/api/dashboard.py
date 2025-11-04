@@ -13,6 +13,8 @@ from app.repositories.application_repository import ApplicationRepository
 from app.repositories.job_repository import JobRepository
 from app.repositories.user_repository import UserRepository
 from app.database_utils import NotFoundError
+from app.services.auth_service import get_current_user
+from app.models.user import User
 
 router = APIRouter()
 
@@ -156,9 +158,10 @@ def get_user_repository() -> UserRepository:
     return UserRepository()
 
 
-@router.get("/users/{user_id}/applications", response_model=List[ApplicationSummary])
-async def get_user_applications(
-    user_id: str,
+@router.get("/applications", response_model=List[ApplicationSummary])
+async def get_my_applications(
+    # REMOVED: user_id: str from path
+    current_user: User = Depends(get_current_user), # ADDED: Get authenticated user
     status: Optional[List[ApplicationStatus]] = Query(None, description="Filter by application status"),
     outcome: Optional[List[ApplicationOutcome]] = Query(None, description="Filter by application outcome"),
     portal: Optional[List[JobPortal]] = Query(None, description="Filter by job portal"),
@@ -169,19 +172,13 @@ async def get_user_applications(
     min_match_score: Optional[float] = Query(None, ge=0.0, le=1.0, description="Minimum match score"),
     limit: int = Query(50, ge=1, le=200, description="Maximum number of results"),
     skip: int = Query(0, ge=0, description="Number of results to skip"),
-    app_repo: ApplicationRepository = Depends(get_application_repository),
-    job_repo: JobRepository = Depends(get_job_repository),
-    user_repo: UserRepository = Depends(get_user_repository)
+    app_repo: ApplicationRepository = Depends(get_application_repository)
+    # REMOVED: job_repo and user_repo dependencies are not needed here anymore
 ) -> List[ApplicationSummary]:
-    """Get user's job applications with filtering and pagination."""
+    """Get the current authenticated user's job applications."""
     try:
-        # Validate user exists
-        user = await user_repo.get_by_id(ObjectId(user_id))
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
+        # CHANGE 2: Use the authenticated user's ID directly
+        user_id = current_user.id
         
         # Build filters
         filters = ApplicationFilters(
@@ -197,24 +194,17 @@ async def get_user_applications(
         
         # Get applications with jobs
         applications_with_jobs = await app_repo.get_applications_with_jobs(
-            user_id=ObjectId(user_id),
+            user_id=user_id, # Use the ID from the token
             filters=filters.dict(exclude_none=True),
             limit=limit,
             skip=skip
         )
         
         # Convert to response models
-        result = []
-        for app, job in applications_with_jobs:
-            result.append(ApplicationSummary.from_application_and_job(app, job))
+        result = [ApplicationSummary.from_application_and_job(app, job) for app, job in applications_with_jobs]
         
         return result
         
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Invalid user ID format"
-        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -222,27 +212,21 @@ async def get_user_applications(
         )
 
 
-@router.get("/users/{user_id}/applications/{application_id}", response_model=ApplicationDetail)
-async def get_application_detail(
-    user_id: str,
+@router.get("/applications/{application_id}", response_model=ApplicationDetail)
+async def get_my_application_detail(
+    # REMOVED: user_id: str from path
     application_id: str,
+    current_user: User = Depends(get_current_user), # ADDED: Auth dependency
     app_repo: ApplicationRepository = Depends(get_application_repository),
-    job_repo: JobRepository = Depends(get_job_repository),
-    user_repo: UserRepository = Depends(get_user_repository)
+    job_repo: JobRepository = Depends(get_job_repository)
 ) -> ApplicationDetail:
-    """Get detailed information about a specific application."""
+    """Get detailed information about one of the current user's applications."""
     try:
-        # Validate user exists
-        user = await user_repo.get_by_id(ObjectId(user_id))
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
         # Get application
         application = await app_repo.get_by_id(ObjectId(application_id))
-        if not application or application.user_id != ObjectId(user_id):
+        
+        # CHANGE 4: Security check - ensure the application belongs to the authenticated user
+        if not application or application.user_id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Application not found"
@@ -251,6 +235,7 @@ async def get_application_detail(
         # Get associated job
         job = await job_repo.get_by_id(application.job_id)
         if not job:
+            # This is an data integrity issue, should probably be a 500 error
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Associated job not found"
@@ -272,9 +257,10 @@ async def get_application_detail(
         )
 
 
-@router.get("/users/{user_id}/metrics", response_model=DashboardMetrics)
+@router.get("/metrics", response_model=DashboardMetrics)
 async def get_dashboard_metrics(
-    user_id: str,
+    # REMOVED: user_id: str from path
+    current_user: User = Depends(get_current_user), # ADDED: Auth dependency
     days: int = Query(30, ge=1, le=365, description="Number of days to include in metrics"),
     app_repo: ApplicationRepository = Depends(get_application_repository),
     job_repo: JobRepository = Depends(get_job_repository),
@@ -282,6 +268,9 @@ async def get_dashboard_metrics(
 ) -> DashboardMetrics:
     """Get dashboard metrics and analytics for a user."""
     try:
+        # CHANGE 5: Use the authenticated user's ID directly
+        user_id = current_user.id
+        
         # Validate user exists
         user = await user_repo.get_by_id(ObjectId(user_id))
         if not user:
@@ -296,7 +285,7 @@ async def get_dashboard_metrics(
         
         # Get metrics from repository
         metrics = await app_repo.get_user_metrics(
-            user_id=ObjectId(user_id),
+            user_id=user_id,
             start_date=start_date,
             end_date=end_date
         )
@@ -315,15 +304,19 @@ async def get_dashboard_metrics(
         )
 
 
-@router.get("/users/{user_id}/trends", response_model=List[ApplicationTrend])
+@router.get("/trends", response_model=List[ApplicationTrend])
 async def get_application_trends(
-    user_id: str,
+    # REMOVED: user_id: str from path
+    current_user: User = Depends(get_current_user), # ADDED: Auth dependency
     days: int = Query(30, ge=7, le=365, description="Number of days for trend data"),
     app_repo: ApplicationRepository = Depends(get_application_repository),
     user_repo: UserRepository = Depends(get_user_repository)
 ) -> List[ApplicationTrend]:
     """Get application trend data for charts."""
     try:
+        # CHANGE 6: Use the authenticated user's ID directly
+        user_id = current_user.id
+        
         # Validate user exists
         user = await user_repo.get_by_id(ObjectId(user_id))
         if not user:
@@ -334,7 +327,7 @@ async def get_application_trends(
         
         # Get trend data
         trends = await app_repo.get_application_trends(
-            user_id=ObjectId(user_id),
+            user_id=user_id,
             days=days
         )
         
@@ -352,7 +345,7 @@ async def get_application_trends(
         )
 
 
-@router.put("/users/{user_id}/applications/{application_id}/outcome")
+@router.put("/applications/{application_id}/outcome")
 async def update_application_outcome(
     user_id: str,
     application_id: str,
@@ -399,9 +392,8 @@ async def update_application_outcome(
         )
 
 
-@router.put("/users/{user_id}/applications/{application_id}/tags")
+@router.put("/applications/{application_id}/tags")
 async def update_application_tags(
-    user_id: str,
     application_id: str,
     tags: List[str],
     app_repo: ApplicationRepository = Depends(get_application_repository),
@@ -446,9 +438,10 @@ async def update_application_tags(
         )
 
 
-@router.get("/users/{user_id}/jobs/queue", response_model=List[Dict[str, Any]])
+@router.get("/jobs/queue", response_model=List[Dict[str, Any]])
 async def get_job_queue(
-    user_id: str,
+    # REMOVED: user_id: str from path
+    current_user: User = Depends(get_current_user), # ADDED: Auth dependency
     limit: int = Query(20, ge=1, le=100, description="Maximum number of results"),
     skip: int = Query(0, ge=0, description="Number of results to skip"),
     job_repo: JobRepository = Depends(get_job_repository),
@@ -500,9 +493,8 @@ async def get_job_queue(
         )
 
 
-@router.post("/users/{user_id}/jobs/{job_id}/skip")
+@router.post("/jobs/{job_id}/skip")
 async def skip_job(
-    user_id: str,
     job_id: str,
     reason: Optional[str] = None,
     job_repo: JobRepository = Depends(get_job_repository),
@@ -511,7 +503,7 @@ async def skip_job(
     """Skip a job in the queue."""
     try:
         # Validate user exists
-        user = await user_repo.get_by_id(ObjectId(user_id))
+        user = await user_repo.get_by_id(ObjectId(current_user.id))
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -520,7 +512,7 @@ async def skip_job(
         
         # Get and validate job
         job = await job_repo.get_by_id(ObjectId(job_id))
-        if not job or job.user_id != ObjectId(user_id):
+        if not job or job.user_id != ObjectId(current_user.id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Job not found"

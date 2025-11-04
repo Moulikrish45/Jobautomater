@@ -791,5 +791,79 @@ class BrowserAutomationService:
             self.logger.error(f"Cleanup failed: {e}")
 
 
+    async def apply_to_job(self, job_url: str, user_profile, resume_path: str, application_id: str) -> Dict[str, Any]:
+        """
+        Main method to apply to a job using browser automation.
+        
+        Args:
+            job_url: URL of the job posting
+            user_profile: User profile data
+            resume_path: Path to resume file
+            application_id: Application ID for tracking
+            
+        Returns:
+            Dict with success status, confirmation details, and any errors
+        """
+        result = {
+            "success": False,
+            "confirmation_number": None,
+            "portal_response": None,
+            "form_data": None,
+            "screenshots": [],
+            "error": None
+        }
+        
+        context = None
+        page = None
+        
+        try:
+            # Initialize if needed
+            if not self._initialized:
+                await self.initialize()
+            
+            # Create browser session
+            context, page = await self.create_session()
+            
+            # Navigate to job URL
+            navigation_success = await self.navigate_to_job(page, job_url)
+            if not navigation_success:
+                result["error"] = "Failed to navigate to job URL"
+                return result
+            
+            # Get portal strategy
+            from app.services.portal_strategies import portal_strategy_manager
+            strategy = portal_strategy_manager.get_strategy(job_url)
+            
+            # Execute portal-specific automation
+            automation_result = await strategy.apply(page, user_profile, resume_path, application_id)
+            
+            # Update result with automation outcome
+            result.update(automation_result)
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Browser automation failed for application {application_id}: {e}")
+            result["error"] = str(e)
+            
+            # Take error screenshot if page exists
+            if page:
+                try:
+                    screenshot_path = await self.take_screenshot(page, f"{application_id}_error")
+                    result["screenshots"].append(screenshot_path)
+                except:
+                    pass
+            
+            return result
+            
+        finally:
+            # Cleanup browser resources
+            try:
+                if context:
+                    await self.browser_manager.close_context(context)
+            except Exception as e:
+                self.logger.error(f"Error closing browser context: {e}")
+
+
 # Global service instance
 browser_automation_service = BrowserAutomationService()

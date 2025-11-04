@@ -1,38 +1,48 @@
-"""Database connection and initialization using Beanie ODM."""
+"""Database connection and initialization."""
 
-import asyncio
+import logging
 from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
+
 from app.config import settings
-import logging
+from app.models.user import User
+from app.models.job import Job
+from app.models.application import Application
+from app.models.resume import Resume
 
 logger = logging.getLogger(__name__)
 
-
-class Database:
-    """Database connection manager."""
-    
-    client: AsyncIOMotorClient = None
-    database = None
-
-
-db = Database()
+# Global database client
+client: AsyncIOMotorClient = None
+database = None
 
 
 async def connect_to_mongo():
-    """Create database connection and initialize Beanie ODM."""
+    """Create database connection."""
+    global client, database
+    
     try:
-        # Create Motor client
-        db.client = AsyncIOMotorClient(settings.mongodb_url)
-        db.database = db.client[settings.database_name]
+        logger.info(f"Connecting to MongoDB at {settings.mongodb_url}")
+        
+        # Create MongoDB client
+        client = AsyncIOMotorClient(
+            settings.mongodb_url,
+            maxPoolSize=settings.mongodb_max_connections,
+            minPoolSize=settings.mongodb_min_connections
+        )
+        
+        # Get database
+        database = client[settings.database_name]
         
         # Test connection
-        await db.client.admin.command('ping')
-        logger.info(f"Connected to MongoDB at {settings.mongodb_url}")
+        await client.admin.command('ping')
+        logger.info("Successfully connected to MongoDB")
         
         # Initialize Beanie with document models
-        from app.models import DOCUMENT_MODELS
-        await init_beanie(database=db.database, document_models=DOCUMENT_MODELS)
+        await init_beanie(
+            database=database,
+            document_models=[User, Job, Application, Resume]
+        )
         logger.info("Beanie ODM initialized successfully")
         
     except Exception as e:
@@ -42,11 +52,16 @@ async def connect_to_mongo():
 
 async def close_mongo_connection():
     """Close database connection."""
-    if db.client:
-        db.client.close()
-        logger.info("Disconnected from MongoDB")
+    global client
+    
+    if client:
+        try:
+            client.close()
+            logger.info("MongoDB connection closed")
+        except Exception as e:
+            logger.error(f"Error closing MongoDB connection: {e}")
 
 
-async def get_database():
+def get_database():
     """Get database instance."""
-    return db.database
+    return database

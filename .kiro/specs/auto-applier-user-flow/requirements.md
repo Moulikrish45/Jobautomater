@@ -32,15 +32,15 @@ An AI-powered job application automation platform that collects user details and
 
 ### Requirement 2
 
-**User Story:** As a job seeker, I want the system to continuously search for relevant jobs across multiple platforms, so that I don't miss any opportunities that match my criteria.
+**User Story:** As an ambitious job seeker, I want to select high-match jobs from my dashboard and trigger an automated application process with an "Auto-Apply" button, so that I can apply to more relevant positions in less time and track the status of each application automatically.
 
 #### Acceptance Criteria
 
-1. THE Job_Search_Agent SHALL search job listings on LinkedIn, Indeed, and Naukri portals
-2. WHEN searching for jobs, THE Job_Search_Agent SHALL use keywords from the user's profile and preferences
-3. THE Job_Search_Agent SHALL filter job listings based on user-specified location, role, and experience requirements
-4. WHEN new matching jobs are found, THE Job_Search_Agent SHALL add them to the application queue
-5. THE Job_Search_Agent SHALL run continuously at configurable intervals to find new job postings
+1. WHEN a user views matched jobs on the dashboard, THE Job_Application_Platform SHALL display an "Auto-Apply" button next to each job listing
+2. WHEN a user clicks the "Auto-Apply" button, THE Job_Application_Platform SHALL immediately queue the application and change the button state to "Queued"
+3. THE Job_Application_Platform SHALL create an Application document with status PENDING and dispatch a Celery task for processing
+4. THE Job_Application_Platform SHALL respond with HTTP 202 Accepted status to indicate successful queuing
+5. WHEN the application is queued, THE Job_Application_Platform SHALL send a real-time notification to the user via WebSocket
 
 ### Requirement 3
 

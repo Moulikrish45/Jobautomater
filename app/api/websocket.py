@@ -7,7 +7,7 @@ from datetime import datetime
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from pydantic import BaseModel
 import logging
-
+from fastapi import Query
 from app.models.application import Application, ApplicationStatus
 from app.models.job import Job, JobStatus
 from app.repositories.application_repository import ApplicationRepository
@@ -16,6 +16,10 @@ from app.repositories.job_repository import JobRepository
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+async def get_current_user(token: str = Query(...)):
+    return await get_current_user(token)
+    
 
 
 class NotificationMessage(BaseModel):
@@ -238,18 +242,19 @@ class NotificationService:
 notification_service = NotificationService(manager)
 
 
-@router.websocket("/ws/{user_id}")
-async def websocket_endpoint(websocket: WebSocket, user_id: str):
-    """WebSocket endpoint for real-time updates."""
+@router.websocket("/ws")
+async def websocket_endpoint(
+    websocket: WebSocket,
+    current_user: User = Depends(get_current_user_ws)
+):
+    user_id = str(current_user.id)
     await manager.connect(websocket, user_id)
     
     try:
         while True:
-            # Wait for messages from client (ping/pong, etc.)
             try:
                 data = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
                 
-                # Handle client messages
                 try:
                     message = json.loads(data)
                     await handle_client_message(websocket, user_id, message)
@@ -257,7 +262,6 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                     logger.warning(f"Invalid JSON received from user {user_id}")
                 
             except asyncio.TimeoutError:
-                # Send ping to keep connection alive
                 await manager.send_to_connection(websocket, {
                     "type": "ping",
                     "timestamp": datetime.utcnow().isoformat()

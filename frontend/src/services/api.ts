@@ -17,10 +17,58 @@ const api = axios.create({
   timeout: 10000,
 });
 
-// Request interceptor for error handling
+// Request interceptor to add auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for error handling and token refresh
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If token is expired, try to refresh
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+          const refreshResponse = await axios.post(
+            `${API_BASE_URL}/auth/refresh`,
+            {},
+            {
+              headers: { Authorization: `Bearer ${token}` }
+            }
+          );
+
+          const newToken = refreshResponse.data.access_token;
+          localStorage.setItem('auth_token', newToken);
+          localStorage.setItem('auth_user', JSON.stringify(refreshResponse.data.user));
+
+          // Retry original request with new token
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        // Refresh failed, redirect to login
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+        window.location.href = '/';
+        return Promise.reject(refreshError);
+      }
+    }
+
     console.error('API Error:', error);
     return Promise.reject(error);
   }

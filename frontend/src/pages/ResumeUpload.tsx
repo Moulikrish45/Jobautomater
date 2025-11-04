@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import {
   Box, Button, Card, CardContent, Typography, Container, Alert,
-  LinearProgress, Chip, Stack, Paper, Grid, Divider
+  LinearProgress, Chip, Stack, Paper, Grid, Divider, Fade
 } from '@mui/material';
 import {
   CloudUpload as UploadIcon,
   CheckCircle as CheckIcon,
   Description as FileIcon
 } from '@mui/icons-material';
+import { useTheme as useCustomTheme } from '../contexts/ThemeContext';
 
 const ResumeUpload: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -17,6 +18,7 @@ const ResumeUpload: React.FC = () => {
   const [matchedJobs, setMatchedJobs] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
+  const { isDarkMode } = useCustomTheme();
 
   const userId = 'user123'; // TODO: Get from auth
 
@@ -58,35 +60,58 @@ const ResumeUpload: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="md">
-      <Box sx={{ py: 4 }}>
-        <Typography variant="h4" fontWeight="bold" gutterBottom textAlign="center">
-          Upload Your Resume
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary" textAlign="center" sx={{ mb: 4 }}>
-          We'll analyze your resume and match you with the best jobs
-        </Typography>
+    <Container maxWidth="md" sx={{ py: 4 }}>
+      <Fade in={true} timeout={800}>
+        <Box>
+          <Typography 
+            variant="h4" 
+            fontWeight="bold" 
+            gutterBottom 
+            textAlign="center"
+            sx={{ 
+              color: isDarkMode ? '#ffffff' : '#1e293b',
+              transition: 'color 0.3s ease',
+            }}
+          >
+            Upload Your Resume
+          </Typography>
+          <Typography variant="subtitle1" color="text.secondary" textAlign="center" sx={{ mb: 4 }}>
+            We'll analyze your resume and match you with the best jobs
+          </Typography>
 
-        {!uploaded ? (
-          <Card elevation={3} sx={{ borderRadius: 3 }}>
-            <CardContent sx={{ p: 4 }}>
-              <Box
-                sx={{
-                  border: '2px dashed',
-                  borderColor: file ? 'primary.main' : 'grey.300',
-                  borderRadius: 2,
-                  p: 4,
-                  textAlign: 'center',
-                  bgcolor: file ? 'primary.50' : 'grey.50',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s',
-                  '&:hover': {
-                    borderColor: 'primary.main',
-                    bgcolor: 'primary.50'
-                  }
-                }}
-                onClick={() => document.getElementById('file-input')?.click()}
-              >
+          {!uploaded ? (
+            <Card 
+              sx={{ 
+                borderRadius: '20px',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: isDarkMode 
+                    ? '0 12px 40px rgba(0, 0, 0, 0.4)'
+                    : '0 12px 40px rgba(0, 0, 0, 0.15)',
+                }
+              }}
+            >
+              <CardContent sx={{ p: 4 }}>
+                <Box
+                  sx={{
+                    border: '2px dashed',
+                    borderColor: file ? 'primary.main' : (isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'grey.300'),
+                    borderRadius: 2,
+                    p: 4,
+                    textAlign: 'center',
+                    bgcolor: file 
+                      ? (isDarkMode ? 'rgba(99, 102, 241, 0.1)' : 'primary.50')
+                      : (isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'grey.50'),
+                    cursor: 'pointer',
+                    transition: 'all 0.3s',
+                    '&:hover': {
+                      borderColor: 'primary.main',
+                      bgcolor: isDarkMode ? 'rgba(99, 102, 241, 0.1)' : 'primary.50'
+                    }
+                  }}
+                  onClick={() => document.getElementById('file-input')?.click()}
+                >
                 <input
                   id="file-input"
                   type="file"
@@ -105,8 +130,8 @@ const ResumeUpload: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <UploadIcon sx={{ fontSize: 64, color: 'grey.400', mb: 2 }} />
-                    <Typography variant="h6" gutterBottom>
+                    <UploadIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                    <Typography variant="h6" gutterBottom color="text.primary">
                       Click to upload or drag and drop
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
@@ -116,7 +141,23 @@ const ResumeUpload: React.FC = () => {
                 )}
               </Box>
 
-              {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+              {error && (
+                <Alert 
+                  severity="error" 
+                  sx={{ 
+                    mt: 2,
+                    backgroundColor: isDarkMode 
+                      ? 'rgba(244, 67, 54, 0.1)'
+                      : 'rgba(244, 67, 54, 0.05)',
+                    border: `1px solid rgba(244, 67, 54, ${isDarkMode ? '0.3' : '0.2'})`,
+                    borderRadius: '12px',
+                    color: 'text.primary',
+                    '& .MuiAlert-icon': { color: '#f44336' }
+                  }}
+                >
+                  {error}
+                </Alert>
+              )}
 
               {file && (
                 <Button
@@ -133,10 +174,21 @@ const ResumeUpload: React.FC = () => {
               )}
 
               {uploading && <LinearProgress sx={{ mt: 2 }} />}
-            </CardContent>
-          </Card>
-        ) : (
-          <Card elevation={3} sx={{ borderRadius: 3 }}>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card 
+              sx={{ 
+                borderRadius: '20px',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: isDarkMode 
+                    ? '0 12px 40px rgba(0, 0, 0, 0.4)'
+                    : '0 12px 40px rgba(0, 0, 0, 0.15)',
+                }
+              }}
+            >
             <CardContent sx={{ p: 4 }}>
               <Box textAlign="center" sx={{ mb: 3 }}>
                 <CheckIcon sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
@@ -152,7 +204,15 @@ const ResumeUpload: React.FC = () => {
 
               <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
-                  <Paper elevation={0} sx={{ p: 2, bgcolor: 'primary.50', borderRadius: 2 }}>
+                  <Paper 
+                    elevation={0} 
+                    sx={{ 
+                      p: 2, 
+                      bgcolor: isDarkMode ? 'rgba(99, 102, 241, 0.1)' : 'primary.50', 
+                      borderRadius: 2,
+                      border: `1px solid ${isDarkMode ? 'rgba(99, 102, 241, 0.3)' : 'transparent'}`
+                    }}
+                  >
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                       Skills Found
                     </Typography>
@@ -162,7 +222,15 @@ const ResumeUpload: React.FC = () => {
                   </Paper>
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <Paper elevation={0} sx={{ p: 2, bgcolor: 'success.50', borderRadius: 2 }}>
+                  <Paper 
+                    elevation={0} 
+                    sx={{ 
+                      p: 2, 
+                      bgcolor: isDarkMode ? 'rgba(16, 185, 129, 0.1)' : 'success.50', 
+                      borderRadius: 2,
+                      border: `1px solid ${isDarkMode ? 'rgba(16, 185, 129, 0.3)' : 'transparent'}`
+                    }}
+                  >
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                       Experience Entries
                     </Typography>
@@ -194,34 +262,71 @@ const ResumeUpload: React.FC = () => {
                   </Typography>
                   <Grid container spacing={2}>
                     <Grid item xs={4}>
-                      <Paper elevation={0} sx={{ p: 2, bgcolor: 'success.50', textAlign: 'center' }}>
+                      <Paper 
+                        elevation={0} 
+                        sx={{ 
+                          p: 2, 
+                          bgcolor: isDarkMode ? 'rgba(16, 185, 129, 0.1)' : 'success.50', 
+                          textAlign: 'center',
+                          border: `1px solid ${isDarkMode ? 'rgba(16, 185, 129, 0.3)' : 'transparent'}`
+                        }}
+                      >
                         <Typography variant="h5" fontWeight="bold" color="success.main">
                           {matchedJobs.filter(j => j.ats_score >= 70).length}
                         </Typography>
-                        <Typography variant="caption">High Match</Typography>
+                        <Typography variant="caption" color="text.secondary">High Match</Typography>
                       </Paper>
                     </Grid>
                     <Grid item xs={4}>
-                      <Paper elevation={0} sx={{ p: 2, bgcolor: 'warning.50', textAlign: 'center' }}>
+                      <Paper 
+                        elevation={0} 
+                        sx={{ 
+                          p: 2, 
+                          bgcolor: isDarkMode ? 'rgba(245, 158, 11, 0.1)' : 'warning.50', 
+                          textAlign: 'center',
+                          border: `1px solid ${isDarkMode ? 'rgba(245, 158, 11, 0.3)' : 'transparent'}`
+                        }}
+                      >
                         <Typography variant="h5" fontWeight="bold" color="warning.main">
                           {matchedJobs.filter(j => j.ats_score >= 50 && j.ats_score < 70).length}
                         </Typography>
-                        <Typography variant="caption">Medium Match</Typography>
+                        <Typography variant="caption" color="text.secondary">Medium Match</Typography>
                       </Paper>
                     </Grid>
                     <Grid item xs={4}>
-                      <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.100', textAlign: 'center' }}>
-                        <Typography variant="h5" fontWeight="bold">
+                      <Paper 
+                        elevation={0} 
+                        sx={{ 
+                          p: 2, 
+                          bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'grey.100', 
+                          textAlign: 'center',
+                          border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'transparent'}`
+                        }}
+                      >
+                        <Typography variant="h5" fontWeight="bold" color="text.primary">
                           {matchedJobs.length}
                         </Typography>
-                        <Typography variant="caption">Total Jobs</Typography>
+                        <Typography variant="caption" color="text.secondary">Total Jobs</Typography>
                       </Paper>
                     </Grid>
                   </Grid>
                   
                   <Box sx={{ mt: 3 }}>
                     {matchedJobs.slice(0, 5).map((job, i) => (
-                      <Card key={i} sx={{ mb: 2, '&:hover': { boxShadow: 4 } }}>
+                      <Card 
+                        key={i} 
+                        sx={{ 
+                          mb: 2, 
+                          borderRadius: '12px',
+                          transition: 'all 0.3s ease',
+                          '&:hover': { 
+                            boxShadow: isDarkMode 
+                              ? '0 8px 32px rgba(0, 0, 0, 0.4)'
+                              : '0 8px 32px rgba(0, 0, 0, 0.15)',
+                            transform: 'translateY(-2px)'
+                          } 
+                        }}
+                      >
                         <CardContent>
                           <Stack direction="row" justifyContent="space-between" alignItems="start">
                             <Box>
@@ -281,7 +386,23 @@ const ResumeUpload: React.FC = () => {
                 {searching ? 'Searching Jobs...' : 'Find Matching Jobs'}
               </Button>
               {searching && <LinearProgress sx={{ mt: 2 }} />}
-              {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+              {error && (
+                <Alert 
+                  severity="error" 
+                  sx={{ 
+                    mt: 2,
+                    backgroundColor: isDarkMode 
+                      ? 'rgba(244, 67, 54, 0.1)'
+                      : 'rgba(244, 67, 54, 0.05)',
+                    border: `1px solid rgba(244, 67, 54, ${isDarkMode ? '0.3' : '0.2'})`,
+                    borderRadius: '12px',
+                    color: 'text.primary',
+                    '& .MuiAlert-icon': { color: '#f44336' }
+                  }}
+                >
+                  {error}
+                </Alert>
+              )}
 
               <Button
                 fullWidth
@@ -296,10 +417,11 @@ const ResumeUpload: React.FC = () => {
               >
                 Upload Another Resume
               </Button>
-            </CardContent>
-          </Card>
-        )}
-      </Box>
+              </CardContent>
+            </Card>
+          )}
+        </Box>
+      </Fade>
     </Container>
   );
 };

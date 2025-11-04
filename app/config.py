@@ -24,6 +24,19 @@ class Settings(BaseSettings):
     
     # Security settings
     secret_key: str = "your-secret-key-change-in-production"
+
+    # JWT settings
+    SECRET_KEY: str = "a_very_secret_key_that_should_be_in_your_env_file"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 # 1 day
+    
+    # Data directories
+    data_dir: str = "data"
+    resume_storage_path: str = "data/resumes"
+    
+    # MongoDB settings
+    mongodb_max_connections: int = 100
+    mongodb_min_connections: int = 10
     
     # Gemini AI settings
     gemini_api_key: str = "AIzaSyBX-Ztg2I6C5zBrrHxRkCatpAiF2P8JDBE"

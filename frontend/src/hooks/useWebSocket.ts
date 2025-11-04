@@ -34,8 +34,8 @@ export const useWebSocket = (
     onConnect,
     onDisconnect,
     onError,
-    reconnectInterval = 3000,
-    maxReconnectAttempts = 5,
+    reconnectInterval = 5000,
+    maxReconnectAttempts = 3,
   } = options;
 
   const [connectionState, setConnectionState] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
@@ -45,6 +45,7 @@ export const useWebSocket = (
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const shouldReconnectRef = useRef(true);
+  const hasShownErrorRef = useRef(false);
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -63,6 +64,7 @@ export const useWebSocket = (
         console.log('WebSocket connected');
         setConnectionState('connected');
         reconnectAttemptsRef.current = 0;
+        hasShownErrorRef.current = false;
         onConnect?.();
       };
 
@@ -77,29 +79,39 @@ export const useWebSocket = (
       };
 
       wsRef.current.onclose = (event) => {
-        console.log('WebSocket disconnected:', event.code, event.reason);
         setConnectionState('disconnected');
         wsRef.current = null;
-        onDisconnect?.();
+        
+        // Only call onDisconnect if we were previously connected
+        if (reconnectAttemptsRef.current === 0) {
+          onDisconnect?.();
+        }
 
         // Attempt to reconnect if not manually closed
         if (shouldReconnectRef.current && reconnectAttemptsRef.current < maxReconnectAttempts) {
           reconnectAttemptsRef.current++;
-          console.log(`Attempting to reconnect (${reconnectAttemptsRef.current}/${maxReconnectAttempts})...`);
           
           reconnectTimeoutRef.current = setTimeout(() => {
             connect();
           }, reconnectInterval);
         } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
-          console.error('Max reconnection attempts reached');
           setConnectionState('error');
+          shouldReconnectRef.current = false;
+          
+          // Only show error once
+          if (!hasShownErrorRef.current) {
+            hasShownErrorRef.current = true;
+            onError?.(new Event('max_reconnect_attempts_reached'));
+          }
         }
       };
 
       wsRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        setConnectionState('error');
-        onError?.(error);
+        // Only log and notify on first error
+        if (!hasShownErrorRef.current) {
+          console.error('WebSocket connection failed');
+          hasShownErrorRef.current = true;
+        }
       };
 
     } catch (error) {

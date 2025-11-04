@@ -3,31 +3,28 @@ export interface ApplicationSummary {
   id: string;
   job_title: string;
   company_name: string;
-  portal: string;
+  portal: JobPortal;
   status: ApplicationStatus;
   outcome?: ApplicationOutcome;
   applied_at?: string;
   created_at: string;
+  updated_at: string;
   total_attempts: number;
   match_score: number;
-  job_location: {
-    city?: string;
-    state?: string;
-    country: string;
-    is_remote: boolean;
-    is_hybrid: boolean;
-  };
+  job_location: JobLocation;
+  company_logo?: string;
+  salary?: SalaryInfo;
+  is_archived: boolean;
+  tags: string[];
 }
 
 export interface ApplicationDetail extends ApplicationSummary {
   user_id: string;
   job_id: string;
   job_url: string;
-  updated_at: string;
   attempts: ApplicationAttempt[];
   submission_data?: SubmissionData;
   notes?: string;
-  tags: string[];
   job_details: JobDetails;
 }
 
@@ -89,15 +86,24 @@ export interface CompanyInfo {
 
 export interface DashboardMetrics {
   total_applications: number;
-  applications_by_status: Record<string, number>;
-  applications_by_outcome: Record<string, number>;
-  applications_by_portal: Record<string, number>;
+  applications_by_status: Record<ApplicationStatus, number>;
+  applications_by_outcome: Record<ApplicationOutcome, number>;
+  applications_by_portal: Record<JobPortal, number>;
   success_rate: number;
   response_rate: number;
   average_response_time_days?: number;
   applications_last_30_days: number;
+  interviews_scheduled: number;
+  offers_received: number;
   top_companies: CompanyMetric[];
   recent_activity: ActivityItem[];
+  monthly_trends: {
+    month: string;
+    applications: number;
+    responses: number;
+    interviews: number;
+    offers: number;
+  }[];
 }
 
 export interface CompanyMetric {
@@ -120,6 +126,8 @@ export interface ApplicationTrend {
   applications_count: number;
   success_count: number;
   response_count: number;
+  interview_count: number;
+  offer_count: number;
 }
 
 export interface JobQueueItem {
@@ -127,10 +135,35 @@ export interface JobQueueItem {
   title: string;
   company: string;
   location: JobLocation;
-  portal: string;
+  portal: JobPortal;
   match_score: number;
   discovered_at: string;
   url: string;
+  description?: string;
+  skills_required?: string[];
+  job_type?: string;
+  experience_level?: string;
+}
+
+// API Request/Response types
+export interface ApiResponse<T> {
+  data: T;
+  message?: string;
+  success: boolean;
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    total_pages: number;
+  };
+}
+
+export interface ErrorResponse {
+  error: string;
+  message: string;
+  statusCode: number;
+  timestamp: string;
+  path: string;
 }
 
 // Enums

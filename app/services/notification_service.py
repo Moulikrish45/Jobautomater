@@ -210,6 +210,63 @@ class NotificationService:
             "timestamp": datetime.utcnow()
         })
     
+    # Auto-Applier specific notification methods
+    
+    async def send_user_notification(self, user_id: str, notification_type: str, 
+                                   message: str, data: Optional[Dict[str, Any]] = None):
+        """Send a user notification with custom type and data."""
+        await self.queue_notification({
+            "type": notification_type,
+            "user_id": user_id,
+            "message": message,
+            "data": data or {},
+            "timestamp": datetime.utcnow()
+        })
+    
+    async def notify_application_queued(self, user_id: str, job_title: str, 
+                                      company: str, application_id: str):
+        """Notify that an application has been queued."""
+        await self.send_user_notification(
+            user_id=user_id,
+            notification_type="application_queued",
+            message=f"Application queued for {job_title} at {company}",
+            data={
+                "application_id": application_id,
+                "job_title": job_title,
+                "company": company,
+                "status": "queued"
+            }
+        )
+    
+    async def notify_application_progress(self, user_id: str, application_id: str,
+                                        step: str, progress: int, job_title: str):
+        """Notify application progress update."""
+        await self.send_user_notification(
+            user_id=user_id,
+            notification_type="application_progress",
+            message=f"Application progress: {step}",
+            data={
+                "application_id": application_id,
+                "job_title": job_title,
+                "step": step,
+                "progress": progress,
+                "status": "in_progress"
+            }
+        )
+    
+    async def notify_application_outcome_updated(self, user_id: str, application_id: str,
+                                               outcome: str):
+        """Notify that application outcome has been updated."""
+        await self.send_user_notification(
+            user_id=user_id,
+            notification_type="application_outcome_updated",
+            message=f"Application outcome updated: {outcome}",
+            data={
+                "application_id": application_id,
+                "outcome": outcome
+            }
+        )
+    
     async def notify_system_error(self, user_id: str, error_type: str, 
                                 error_message: str, context: Optional[Dict[str, Any]] = None):
         """Notify of a system error."""

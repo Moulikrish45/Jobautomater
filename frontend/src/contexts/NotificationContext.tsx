@@ -45,7 +45,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp'>) => {
     const newNotification: Notification = {
       ...notification,
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
       timestamp: new Date(),
       autoHide: notification.autoHide !== false,
       duration: notification.duration || 6000,
@@ -147,24 +147,26 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
     onConnect: () => {
       addNotification({
         type: 'success',
-        message: 'Connected to real-time updates',
+        message: 'Real-time updates connected',
         autoHide: true,
-        duration: 3000,
+        duration: 2000,
       });
     },
     onDisconnect: () => {
+      // Only show disconnect message if we were actually connected
       addNotification({
-        type: 'warning',
-        message: 'Disconnected from real-time updates',
+        type: 'info',
+        message: 'Real-time updates offline',
         autoHide: true,
-        duration: 3000,
+        duration: 2000,
       });
     },
     onError: () => {
       addNotification({
-        type: 'error',
-        message: 'Failed to connect to real-time updates',
-        autoHide: false,
+        type: 'warning',
+        message: 'Real-time updates unavailable - working in offline mode',
+        autoHide: true,
+        duration: 4000,
       });
     },
   });

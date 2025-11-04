@@ -375,3 +375,5 @@ class ResumeRepository(BaseRepository[Resume]):
             sort_by="created_at",
             sort_order=DESCENDING
         )
+# Global instance
+resume_repository = ResumeRepository()

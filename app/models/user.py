@@ -1,10 +1,11 @@
 """User model with profile data and job preferences."""
 
+from dataclasses import field
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from enum import Enum
 from beanie import Document
-from pydantic import BaseModel, Field, EmailStr, validator
+from pydantic import BaseModel, Field, EmailStr, field_validator
 
 
 class WorkType(str, Enum):
@@ -23,7 +24,7 @@ class JobPreferences(BaseModel):
     company_types: List[str] = Field(default_factory=list, description="Preferred company types")
     work_type: WorkType = Field(default=WorkType.ANY, description="Work arrangement preference")
     
-    @validator('salary_range')
+    @field_validator('salary_range')
     def validate_salary_range(cls, v):
         """Validate salary range has min and max keys with valid values."""
         if not isinstance(v, dict):
@@ -48,7 +49,7 @@ class PersonalInfo(BaseModel):
     address: Optional[str] = Field(None, max_length=200)
     linkedin_url: Optional[str] = Field(None, pattern=r'^https://www\.linkedin\.com/in/[\w\-]+/?$')
     
-    @validator('phone')
+    @field_validator('phone')
     def validate_phone(cls, v):
         """Validate phone number format."""
         if v and len(v.replace(' ', '').replace('-', '').replace('(', '').replace(')', '').replace('+', '')) < 10:
@@ -65,7 +66,7 @@ class Experience(BaseModel):
     description: str = Field(..., min_length=10, max_length=1000)
     skills_used: List[str] = Field(default_factory=list)
     
-    @validator('end_date')
+    @field_validator('end_date')
     def validate_end_date(cls, v, values):
         """Validate end date is after start date."""
         if v and 'start_date' in values and v < values['start_date']:
@@ -94,22 +95,23 @@ class User(Document):
     is_active: bool = Field(default=True, description="Whether user account is active")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+    hashed_password: str = Field(..., description="Hashed password for authentication")
     
-    @validator('skills')
+    @field_validator('skills')
     def validate_skills(cls, v):
         """Validate skills list."""
         if len(v) > 50:
             raise ValueError('Maximum 50 skills allowed')
         return [skill.strip() for skill in v if skill.strip()]
     
-    @validator('experience')
+    @field_validator('experience')
     def validate_experience(cls, v):
         """Validate experience entries."""
         if len(v) > 20:
             raise ValueError('Maximum 20 experience entries allowed')
         return v
     
-    @validator('education')
+    @field_validator('education')
     def validate_education(cls, v):
         """Validate education entries."""
         if len(v) > 10:
@@ -122,6 +124,7 @@ class User(Document):
     
     class Settings:
         name = "users"
+        # Removed projection to allow hashed_password retrieval for authentication
         indexes = [
             "personal_info.email",
             "is_active",
